@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="utf-8"?>
+<s:Application xmlns:fx="http://ns.adobe.com/mxml/2009"
+               xmlns:s="library://ns.adobe.com/flex/spark"
+               xmlns:mx="library://ns.adobe.com/flex/mx" initialize="setup();">
+    <s:layout>
+        <s:VerticalLayout/>
+    </s:layout>
+
+    <s:states>
+        <s:State name="record"/>
+        <s:State name="error"/>
+    </s:states>
+    <fx:Script><![CDATA[
+        import mx.core.FlexGlobals;
+
+        [Bindable]
+        public var record_url:String;
+
+        [Bindable]
+        public var stream_name:String;
+
+        [Bindable]
+        public var rec_url:String;
+
+        var nc:NetConnection;
+        var ns:NetStream;
+        var nsPlayer:NetStream;
+        var vid:Video;
+        var vidPlayer:Video;
+        var cam:Camera;
+        var mic:Microphone;
+
+        function setup():void {
+
+            ExternalInterface.call("debug", "Setting up flash vars and adding external interfaces");
+
+            record_url = FlexGlobals.topLevelApplication.parameters.record_url;
+            stream_name = FlexGlobals.topLevelApplication.parameters.stream_name;
+            currentState = "record";
+
+            ExternalInterface.addCallback("record", record);
+            ExternalInterface.addCallback("stop", stop);
+        }
+
+        function attachCamera():void {
+            cam = Camera.getCamera();
+            cameraDisplay.attachCamera(cam);
+        }
+
+
+        function record():void {
+            ExternalInterface.call("debug", "Connecting to record url");
+            nc = new NetConnection();
+            nc.addEventListener(NetStatusEvent.NET_STATUS, onNetStatus);
+            nc.connect(record_url);
+        }
+
+        function stop():void {
+            nc.close();
+        }
+
+        function onNetStatus(event:NetStatusEvent):void {
+            ExternalInterface.call("debug", "Got here");
+            if (event.info.code == "NetConnection.Connect.Success") {
+                publishCamera();
+            } else {
+                ExternalInterface.call("console.log", "Why int it showin");
+                showError("Failed to connect to [" + record_url + "]")
+            }
+        }
+
+        function publishCamera():void {
+            mic = Microphone.getMicrophone();
+            ns = new NetStream(nc);
+            ns.attachCamera(cam);
+            ns.attachAudio(mic);
+            ns.publish(stream_name, "live");
+        }
+
+        function showError(message:String) {
+            currentState = "error";
+            errorLabel.text = message;
+        }
+
+        ]]></fx:Script>
+
+    <mx:VideoDisplay id="cameraDisplay"
+                     creationComplete="attachCamera();"
+                     width="100%"
+                     height="100%" includeIn="record"/>
+
+    <mx:Label id="errorLabel" includeIn="error"/>
+
+
+</s:Application>
