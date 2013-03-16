@@ -44,6 +44,7 @@
 
         function attachCamera():void {
             cam = Camera.getCamera();
+            cam.setQuality(0, 100);
             cameraDisplay.attachCamera(cam);
         }
 
@@ -60,12 +61,9 @@
         }
 
         function onNetStatus(event:NetStatusEvent):void {
-            ExternalInterface.call("debug", "Got here");
+            ExternalInterface.call("debug", "Net Status: " + event.info.code);
             if (event.info.code == "NetConnection.Connect.Success") {
                 publishCamera();
-            } else {
-                ExternalInterface.call("console.log", "Why int it showin");
-                showError("Failed to connect to [" + record_url + "]")
             }
         }
 

@@ -1,2 +1,4 @@
 dist
 .idea/workspace.xml
+out
+.DS_Store
