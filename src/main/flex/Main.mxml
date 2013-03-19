@@ -47,7 +47,6 @@
         }
 
         function micLevel() {
-            debugMessage("Miccy: " + mic.activityLevel);
             return mic.activityLevel;
         }
 
@@ -100,6 +99,7 @@
                 debugMessage(e);
             }
             debugMessage("disposed : " + new Date().getTime());
+            mic.addEventListener(SampleDataEvent.SAMPLE_DATA, voidFunc);
         }
 
         function onNetStatus(event:NetStatusEvent):void {
