@@ -39,17 +39,36 @@
 
             ExternalInterface.addCallback("record", record);
             ExternalInterface.addCallback("stop", stop);
+            ExternalInterface.addCallback("micLevel", micLevel);
 
             ready = false;
 
             debugMessage("Setting up flash vars and adding external interfaces");
         }
 
+        function micLevel() {
+            debugMessage("Miccy: " + mic.activityLevel);
+            return mic.activityLevel;
+        }
+
+        function voidFunc(event:SampleDataEvent) {
+
+        }
+
         function attachCamera():void {
+            mic = Microphone.getMicrophone();
+
+            mic.gain = 60;
+            mic.rate = 11;
+            mic.setUseEchoSuppression(true);
+            mic.setSilenceLevel(0, -1);
+
+            mic.addEventListener(SampleDataEvent.SAMPLE_DATA, voidFunc);
+
             cam = Camera.getCamera();
             cam.setMode(480, 360, 30, false);
             cam.setQuality(0, 90);
-            cam.setKeyFrameInterval(30)
+            cam.setKeyFrameInterval(30);
 
             cam.addEventListener(ActivityEvent.ACTIVITY, camera_activity);
 
@@ -91,10 +110,7 @@
         }
 
         function publishCamera():void {
-            mic = Microphone.getMicrophone();
-
-            mic.rate = 11;
-            mic.setSilenceLevel(0, -1);
+            mic.removeEventListener(SampleDataEvent.SAMPLE_DATA, voidFunc);
 
             ns = new NetStream(nc);
             ns.attachCamera(cam);
