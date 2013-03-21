@@ -28,7 +28,8 @@
         var cam:Camera;
         var mic:Microphone;
 
-        var ready:Boolean;
+        var cameraReady:Boolean;
+        var netReady:Boolean;
 
         function setup():void {
             record_url = FlexGlobals.topLevelApplication.parameters.record_url;
@@ -41,7 +42,12 @@
             ExternalInterface.addCallback("stop", stop);
             ExternalInterface.addCallback("micLevel", micLevel);
 
-            ready = false;
+            cameraReady = false;
+            netReady = false;
+
+            nc = new NetConnection();
+            nc.addEventListener(NetStatusEvent.NET_STATUS, onNetStatus);
+            nc.connect(record_url);
 
             debugMessage("Setting up flash vars and adding external interfaces");
         }
@@ -77,18 +83,19 @@
         }
 
         function camera_activity(evt:ActivityEvent):void {
-            if (!ready) {
+            if (!cameraReady) {
                 debugMessage("Camera should be ready now");
-                ExternalInterface.call("__video_recorder_ready", ref);
-                ready = true;
+                cameraReady = true;
+                if (netReady) {
+                    ExternalInterface.call("__video_recorder_ready", ref);
+                }
             }
         }
 
         function record():void {
+            publishCamera();
             debugMessage("Connecting to record url");
-            nc = new NetConnection();
-            nc.addEventListener(NetStatusEvent.NET_STATUS, onNetStatus);
-            nc.connect(record_url);
+
         }
 
         function stop():void {
@@ -105,7 +112,10 @@
         function onNetStatus(event:NetStatusEvent):void {
             debugMessage("Net Status: " + event.info.code);
             if (event.info.code == "NetConnection.Connect.Success") {
-                publishCamera();
+                netReady = true;
+                if (cameraReady) {
+                    ExternalInterface.call("__video_recorder_ready", ref);
+                }
             }
         }
 
