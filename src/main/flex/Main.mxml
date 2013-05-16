@@ -85,6 +85,13 @@
         }
 
         function attachCamera():void {
+            if (Camera.names.length > 0){
+                debugMessage("User has at least one camera installed")
+                }
+            else{
+                ExternalInterface.call("__video_recorder_absent", ref);
+                }
+
             mic = Microphone.getMicrophone();
 
             mic.gain = 60;
@@ -100,10 +107,23 @@
             cam.setKeyFrameInterval(30);
 
             cam.addEventListener(ActivityEvent.ACTIVITY, camera_activity);
+            cam.addEventListener(StatusEvent.STATUS, statusHandler);
 
             cameraDisplay.attachCamera(cam);
 
             debugMessage("Camera is setup.");
+        }
+            
+
+            function statusHandler(event:StatusEvent):void{
+            if (cam.muted)
+            {
+                ExternalInterface.call("__video_recorder_denied", ref);
+            }
+            else
+            {
+                debugMessage("User clicked Accept.");
+            }
         }
 
         function camera_activity(evt:ActivityEvent):void {
