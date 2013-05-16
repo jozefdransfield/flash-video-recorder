@@ -38,23 +38,47 @@
 
             currentState = "record";
 
+            ExternalInterface.addCallback("connect", connect);
             ExternalInterface.addCallback("record", record);
             ExternalInterface.addCallback("stop", stop);
             ExternalInterface.addCallback("micLevel", micLevel);
 
             cameraReady = false;
-            netReady = false;
 
-            nc = new NetConnection();
-            nc.addEventListener(NetStatusEvent.NET_STATUS, onNetStatus);
-            nc.connect(record_url);
-
-            debugMessage("Setting up flash vars and adding external interfaces");
+            debugMessage("Setting called");
         }
 
+        /* External API */
         function micLevel() {
             return mic.activityLevel;
         }
+
+        function connect() {
+            debugMessage("Connect");
+            nc = new NetConnection();
+            nc.addEventListener(NetStatusEvent.NET_STATUS, onNetStatus);
+            nc.connect(record_url);
+        }
+
+        function record():void {
+            publishCamera();
+            debugMessage("Recording");
+
+        }
+
+        function stop():void {
+            try {
+                nc.close();
+                ns.dispose();
+            } catch (e) {
+                debugMessage(e);
+            }
+            debugMessage("disposed : " + new Date().getTime());
+            mic.addEventListener(SampleDataEvent.SAMPLE_DATA, voidFunc);
+        }
+
+        /* External API */
+
 
         function voidFunc(event:SampleDataEvent) {
 
@@ -79,43 +103,22 @@
 
             cameraDisplay.attachCamera(cam);
 
-            debugMessage("Camera is setup, YAY");
+            debugMessage("Camera is setup.");
         }
 
         function camera_activity(evt:ActivityEvent):void {
             if (!cameraReady) {
                 debugMessage("Camera should be ready now");
                 cameraReady = true;
-                if (netReady) {
-                    ExternalInterface.call("__video_recorder_ready", ref);
-                }
+                ExternalInterface.call("__video_recorder_ready", ref);
             }
-        }
-
-        function record():void {
-            publishCamera();
-            debugMessage("Connecting to record url");
-
-        }
-
-        function stop():void {
-            try {
-                nc.close();
-                ns.dispose();
-            } catch (e) {
-                debugMessage(e);
-            }
-            debugMessage("disposed : " + new Date().getTime());
-            mic.addEventListener(SampleDataEvent.SAMPLE_DATA, voidFunc);
         }
 
         function onNetStatus(event:NetStatusEvent):void {
             debugMessage("Net Status: " + event.info.code);
             if (event.info.code == "NetConnection.Connect.Success") {
                 netReady = true;
-                if (cameraReady) {
-                    ExternalInterface.call("__video_recorder_ready", ref);
-                }
+                ExternalInterface.call("__video_recorder_connect", ref);
             }
         }
 
@@ -137,14 +140,12 @@
         private function debugMessage(msg:String):void {
             ExternalInterface.call("__video_recorder_debug", ref, msg);
         }
-
-
         ]]></fx:Script>
 
     <mx:VideoDisplay id="cameraDisplay"
                      creationComplete="attachCamera();"
                      width="100%"
-                     height="100%" includeIn="record" />
+                     height="100%" includeIn="record"/>
 
     <mx:Label id="errorLabel" includeIn="error"/>
 
