@@ -31,6 +31,8 @@
         var cameraReady:Boolean;
         var netReady:Boolean;
 
+        var flushinterval:Number;
+
         function setup():void {
             record_url = FlexGlobals.topLevelApplication.parameters.record_url;
             stream_name = FlexGlobals.topLevelApplication.parameters.stream_name;
@@ -40,7 +42,7 @@
 
             ExternalInterface.addCallback("connect", connect);
             ExternalInterface.addCallback("record", record);
-            ExternalInterface.addCallback("stop", stop);
+            ExternalInterface.addCallback("stop", disconnect);
             ExternalInterface.addCallback("micLevel", micLevel);
 
             cameraReady = false;
@@ -66,7 +68,36 @@
 
         }
 
-        function stop():void {
+
+        function stopClicked():void
+        {
+            // pause the netStream object
+            ns.pause();
+            //detach video
+            ns.attachCamera(null);
+            ns.attachAudio(null);
+            //also detach video from our monitor, in our case an object called videoContainer
+            cameraDisplay.attachCamera(null);
+
+            //spin up a thread to check the buffer every 500ms and close it once empty
+            flushinterval = setInterval(flusher, 500);
+        }
+
+        function flusher():void{
+            //This gets called by the setInterval above every 500ms until the interval is
+            //cleared below, when the buffer is empty
+            if((ns.bufferLength == 0)){
+                //great, the buffer is empty, close it up and stop this interval
+                clearInterval(flushinterval);
+                disconnect();
+            } else{
+                trace("still flushing: " + ns.bufferLength)
+                //You'll probably want to show some message to the user here that
+                //their recording is uploading/completing
+            }
+        }
+
+        function disconnect():void {
             try {
                 nc.close();
                 ns.dispose();
@@ -144,9 +175,14 @@
             mic.removeEventListener(SampleDataEvent.SAMPLE_DATA, voidFunc);
 
             ns = new NetStream(nc);
+            ns.bufferTime = 30;
+            debugMessage("Buffer "+ns.bufferTime);
+
             ns.attachCamera(cam);
             ns.attachAudio(mic);
             ns.publish(stream_name, "live");
+
+
             ExternalInterface.call("__video_recorder_recording", ref);
         }
 
