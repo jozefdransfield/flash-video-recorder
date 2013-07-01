@@ -42,8 +42,9 @@
 
             ExternalInterface.addCallback("connect", connect);
             ExternalInterface.addCallback("record", record);
-            ExternalInterface.addCallback("stop", disconnect);
+            ExternalInterface.addCallback("stop", stopClicked);
             ExternalInterface.addCallback("micLevel", micLevel);
+            ExternalInterface.addCallback("attachCamera", attachCamera);
 
             cameraReady = false;
 
@@ -80,31 +81,36 @@
             cameraDisplay.attachCamera(null);
 
             //spin up a thread to check the buffer every 500ms and close it once empty
+            debugMessage("Should have worked!")
+            ExternalInterface.call("__video_recorder_upload_start", ref, ns.bufferLength);
             flushinterval = setInterval(flusher, 500);
         }
 
         function flusher():void{
+            debugMessage("Calling the flusher : " + ns.bufferLength + " left");
             //This gets called by the setInterval above every 500ms until the interval is
             //cleared below, when the buffer is empty
             if((ns.bufferLength == 0)){
                 //great, the buffer is empty, close it up and stop this interval
+                debugMessage("Disconnecting");
                 clearInterval(flushinterval);
                 disconnect();
             } else{
-                trace("still flushing: " + ns.bufferLength)
-                //You'll probably want to show some message to the user here that
-                //their recording is uploading/completing
+                debugMessage("Got some data left");
+                trace("still flushing: " + ns.bufferLength);
+                ExternalInterface.call("__video_recorder_upload_progress", ref, ns.bufferLength);
             }
         }
 
         function disconnect():void {
             try {
-                nc.close();
                 ns.dispose();
+                nc.close();
             } catch (e) {
                 debugMessage(e);
             }
             debugMessage("disposed : " + new Date().getTime());
+            ExternalInterface.call("__video_recorder_upload_complete", ref);
             mic.addEventListener(SampleDataEvent.SAMPLE_DATA, voidFunc);
         }
 
@@ -176,7 +182,7 @@
 
             ns = new NetStream(nc);
             ns.bufferTime = 30;
-            debugMessage("Buffer "+ns.bufferTime);
+            debugMessage("Buffer Time"+ns.bufferTime);
 
             ns.attachCamera(cam);
             ns.attachAudio(mic);
